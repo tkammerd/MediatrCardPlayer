@@ -30,13 +30,6 @@ namespace CardPlayer.API
         {
             //services.AddControllers();
             services.AddControllers().AddNewtonsoftJson();
-            services.AddControllers(opt =>  // or AddMvc()
-            {
-                // remove formatter that turns nulls into 204 - No Content responses
-                // this formatter breaks Angular's Http response JSON parsing
-                // from https://weblog.west-wind.com/posts/2020/Feb/24/Null-API-Responses-and-HTTP-204-Results-in-ASPNET-Core
-                opt.OutputFormatters.RemoveType<HttpNoContentOutputFormatter>();
-            });
             services.AddMediatR(typeof(Startup));
             services.AddDbContext<GameContext>(options => options.UseInMemoryDatabase(databaseName: "GameDB"));
         }

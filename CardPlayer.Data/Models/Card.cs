@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ namespace CardPlayer.Data.Models
             Name = $"{CardRank.Name} of {CardSuit.Name}";
             ShortName = $"{CardRank.ShortName}{CardSuit.ShortName}";
         }
+
         public Card(string name, string shortName)
         {
             Suited = false;
@@ -29,9 +31,12 @@ namespace CardPlayer.Data.Models
             CardSuit = null;
         }
 
-        public Card()
+        [JsonConstructor]
+        public Card(string name, string shortName, Rank cardRank, Suit cardSuit, bool suited) : this(name, shortName)
         {
-
+            CardRank = cardRank;
+            CardSuit = cardSuit;
+            Suited = suited;
         }
 
         public override string ToString()
