@@ -1,0 +1,23 @@
+﻿@model CardTableViewModel
+
+@{
+    ViewData["Title"] = "Deck";
+}
+
+<h1 class="display-4">@Model.Title</h1>
+
+<table>
+    @{ var CardColumns = Model.UndealtCards.TypeOfDeck.OrderedRanks.Count;
+    }
+    @for (var skipCards = 0;
+       skipCards < Model.UndealtCards.Cards.Count;
+       skipCards += CardColumns)
+    {
+        <tr>
+            @foreach (var card in Model.UndealtCards.Cards.Skip<Card>(skipCards).Take<Card>(CardColumns))
+            {
+                <td><h4>@card&nbsp;</h4></td>
+            }
+        </tr>
+    }
+</table>

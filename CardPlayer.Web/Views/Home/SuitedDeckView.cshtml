@@ -1,0 +1,29 @@
+﻿@model CardTableViewModel
+
+@{
+    ViewData["Title"] = "Deck";
+}
+
+<h1 class="display-4">@Model.Title</h1>
+
+<table>
+    @foreach (var suit in Model.UndealtCards.TypeOfDeck.OrderedSuits)
+    {
+        <tr>
+            @foreach (var card in Model.UndealtCards.Cards
+                .Where(c => c.CardSuit != null && c.CardSuit.Equals(suit)))
+            {
+                <td><h4>@card&nbsp;</h4></td>
+            }
+        </tr>
+    }
+    @if(Model.UndealtCards.Cards.Exists(c => !c.Suited))
+    {
+        <tr>
+            @foreach (var card in Model.UndealtCards.Cards.Where(c => !c.Suited))
+            {
+                <td><h4>@card&nbsp;</h4></td>
+            }
+        </tr>
+    }
+</table>

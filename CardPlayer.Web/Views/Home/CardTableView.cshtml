@@ -1,0 +1,41 @@
+﻿@model CardTableViewModel
+
+@{
+    ViewData["Title"] = "Card Table";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1 class="display-4">@Model.Title</h1>
+
+@{ int handNum = 0; }
+<table>
+    @foreach (var hand in Model.Hands)
+    {
+        <tr>
+            @{handNum++;}
+            <td><h4>Hand #@handNum:</h4></td>
+            @foreach (var card in hand.Cards)
+            {
+                <td><h4>@card&nbsp;</h4></td>
+            }
+        </tr>
+    }
+</table>
+
+<h1 class="display-4">Remaining Cards:</h1>
+
+<table>
+    @{ var CardColumns = Model.UndealtCards.TypeOfDeck.OrderedRanks.Count;
+    }
+    @for (var skipCards = 0;
+         skipCards < Model.UndealtCards.Cards.Count;
+         skipCards += CardColumns)
+    {
+        <tr>
+            @foreach (var card in Model.UndealtCards.Cards.Skip<Card>(skipCards).Take<Card>(CardColumns))
+            {
+                <td><h4>@card&nbsp;</h4></td>
+            }
+        </tr>
+    }
+</table>
