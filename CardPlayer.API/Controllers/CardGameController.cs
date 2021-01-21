@@ -131,7 +131,7 @@ namespace CardPlayer.API.Controllers
             return await Task.Run(() => DealCardFrom(_foyer.Find(g => g.Id == GameId)));
         }
 
-        private Card DealCardFrom(Game game)
+        private static Card DealCardFrom(Game game)
         {
             Card CardDealt = game.ShuffledDeck.Cards.FirstOrDefault();
             game.ShuffledDeck.Cards.RemoveRange(0, 1);
@@ -229,7 +229,7 @@ namespace CardPlayer.API.Controllers
             });
         }
 
-        [HttpPost("AddPlayer")]
+        [HttpPut("AddPlayer")]
         public async Task<ActionResult> AddPlayer([FromBody] Player player)
         {
             if (CurrentGame.Players.Count < CurrentGame.MaximumPlayers)

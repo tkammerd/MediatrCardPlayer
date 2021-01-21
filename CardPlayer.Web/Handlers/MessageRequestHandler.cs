@@ -12,7 +12,7 @@ namespace CardPlayer.Web.Handlers
     {
         public async Task<string> Handle(MessageRequest request, CancellationToken cancellationToken)
         {
-            return "Default Response";
+            return await Task.Run(() => "Default Response");
         }
     }
 
@@ -22,7 +22,7 @@ namespace CardPlayer.Web.Handlers
         public async Task<bool> Handle(MessageSend message, CancellationToken cancellationToken)
         {
             Message = message.MessageText;
-            return true;
+            return await Task.Run(() => true);
         }
     }
 }
