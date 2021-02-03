@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CardPlayer.API", "CardPlaye
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{63EA4846-B2D9-4AB5-800F-1630F70B9B0B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardPlayer.Test", "CardPlayer.Test\CardPlayer.Test.csproj", "{B356D17C-4A51-4234-819E-06C63F95FB89}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{2A8892DF-DEE5-4294-945C-FD361CEEF4D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A8892DF-DEE5-4294-945C-FD361CEEF4D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A8892DF-DEE5-4294-945C-FD361CEEF4D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B356D17C-4A51-4234-819E-06C63F95FB89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B356D17C-4A51-4234-819E-06C63F95FB89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B356D17C-4A51-4234-819E-06C63F95FB89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B356D17C-4A51-4234-819E-06C63F95FB89}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,245 +9,412 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 
 namespace CardPlayer.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IMediator _mediator;
+        internal static string ApiLocation { get; set; } = "https://localhost:44331/api/CardGame/";
+        internal static Game SelectedGame { get; set; } = null;
+        internal static int SelectedGameId => (SelectedGame != null) ? SelectedGame.Id : 0;
+        internal static Player SelectedPlayer { get; set; } = null;
 
-        private const StandardDecks START_DECK_TYPE = StandardDecks.Traditional;
-        private const int START_HAND_SIZE = 5;
-        private static readonly Random _rng;
-        private static Game _currentGame;
-        private static Player _currentPlayer;
-        
-        private static CardTableViewModel _cardTable;
-
-        private bool PlayerCreated { get; set; }
-        private bool GameCreated { get; set; }
-        private bool PlayerJoinedGame { get; set; }
-
-        public HomeController(IMediator mediator)
+        private void SetMenuToggles()
         {
-            _mediator = mediator;
-
-            PlayerCreated = HomeController._currentPlayer != null;
-            GameCreated = HomeController._currentGame.MaximumPlayers != 0;
-            PlayerJoinedGame = PlayerCreated && GameCreated &&
-                HomeController._currentGame.Players.Contains(HomeController._currentPlayer);
-        }
-
-        static HomeController()
-        {
-            HomeController._rng = new Random();
-            _currentGame = new Game()
-            {
-                StandardDeckType = START_DECK_TYPE,
-                HandSize = START_HAND_SIZE,
-                StartDeck = new Deck(START_DECK_TYPE),
-                ShuffledDeck = new Deck(START_DECK_TYPE)
-            };
-            HomeController.Shuffle();
-           _cardTable = new CardTableViewModel("", HomeController._currentGame.StartDeck);
-        }
-
-        private static void Shuffle()
-        {
-            HomeController._currentGame.ShuffledDeck.Cards =
-            (
-                from card in HomeController._currentGame.StartDeck.Cards
-                orderby HomeController._rng.Next()
-                select card
-            ).ToList();
-            HomeController._currentGame.Players.ForEach(p => p.PlayerHand = new Hand());
+            ViewData["PlayerIsSelected"] = SelectedPlayer != null;
+            ViewData["GameIsSelected"] = SelectedGame != null;
+            ViewData["PlayerIsInGame"] = SelectedPlayer != null && SelectedGame != null &&
+                SelectedGame.Players.Contains(SelectedPlayer);
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            _cardTable.Title = "Cards in original order:";
-            _cardTable.UndealtCards = new Deck(HomeController._currentGame.StartDeck);
+            FoyerViewModel FoyerView = new FoyerViewModel
+            {
+                GameIdSelected = SelectedGameId,
+                Games = new List<Game> { SelectedGame }
+            };
+            using (var Client = new HttpClient())
+            {
+                using var Response = await Client.GetAsync($"{ApiLocation}Foyer");
+                var apiResponse = await Response.Content.ReadAsStringAsync();
+                FoyerView.Games = JsonSerializer.Deserialize<List<Game>>(apiResponse);
+            }
 
-            return View("DeckView", _cardTable);
+            SetMenuToggles();
+            var DebugView = View(FoyerView);
+            return DebugView;
+            //return View("Index", FoyerView);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SelectGame()
+        {
+            FoyerViewModel FoyerView = new FoyerViewModel() 
+                { GameIdSelected = SelectedGameId };
+            using (var Client = new HttpClient())
+            {
+                using var Response = await Client.GetAsync($"{ApiLocation}Foyer");
+                var apiResponse = await Response.Content.ReadAsStringAsync();
+                FoyerView.Games = JsonSerializer.Deserialize<List<Game>>(apiResponse);
+            }
+
+            SetMenuToggles();
+            return View(FoyerView);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SelectGame([FromForm] int GameIdSelected)
+        {
+            using (var Client = new HttpClient())
+            {
+                using var Response = await Client.GetAsync(
+                    $"{ApiLocation}SetCurrentGameTo/{GameIdSelected}");
+                var apiResponse = await Response.Content.ReadAsStringAsync();
+                SelectedGame = JsonSerializer.Deserialize<Game>(apiResponse);
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public IActionResult Original()
+        {
+
+            CardTableViewModel CardTable = new CardTableViewModel
+            {
+                Title = "Cards in original order:",
+                UndealtCards = (SelectedGame != null) ? new Deck(SelectedGame.StartDeck) :
+                    new Deck(DeckType.MakeDeckType(StandardDecks.Traditional), new List<Card>())
+            };
+
+            SetMenuToggles();
+            return View("DeckView", CardTable);
         }
 
         [HttpGet]
         public IActionResult CreateGame()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
+            SetMenuToggles();
             return View();
         }
 
         [HttpPost]
-        public ActionResult CreateGame(Game game)
+        public async Task<IActionResult> CreateGame(Game game)
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
+            CardTableViewModel CardTable = new CardTableViewModel();
             if (ModelState.IsValid)
             {
-                _currentGame = game;
-                HomeController._currentGame.StartDeck = new Deck(_currentGame.StandardDeckType);
-                HomeController._currentGame.ShuffledDeck = new Deck(_currentGame.StandardDeckType);
-                HomeController.Shuffle();
-                _cardTable = new CardTableViewModel("", HomeController._currentGame.StartDeck);
-                GameCreated = true;
-                ViewData["GameCreated"] = GameCreated;
-                PlayerJoinedGame = false;
-                ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-                //game.TaskId = StartGame(game);
+                using var Client = new HttpClient();
+                int GameId;
+                using (var Response = await Client.GetAsync(
+                    $"{ApiLocation}NewGame/{game.StandardDeckType}/{game.MaximumPlayers}/{game.HandSize}"))
+                {
+                    var apiResponse = await Response.Content.ReadAsStringAsync();
+                    GameId = JsonSerializer.Deserialize<int>(apiResponse);
+                    CardTable.Title = $"New Game (ID: {GameId}) Created";
+                }
+                using (var Response = await Client.GetAsync(
+                    $"{ApiLocation}GetStartDeck/{GameId}"))
+                {
+                    var apiResponse = await Response.Content.ReadAsStringAsync();
+                    CardTable.UndealtCards = JsonSerializer.Deserialize<Deck>(apiResponse);
+                }
+                using (var Response = await Client.GetAsync(
+                    $"{ApiLocation}SetCurrentGameTo/{GameId}"))
+                {
+                    var apiResponse = await Response.Content.ReadAsStringAsync();
+                    SelectedGame = JsonSerializer.Deserialize<Game>(apiResponse);
+                }
+
+                SetMenuToggles();
+                return View("CardTableView", CardTable);
             }
-            
-            return View();
-        }
-
-        //public async Task StartGame(Game game)
-        //{
-        //    string MessageFromUI = await Mediator.Send(new MessageRequest());
-        //}
-
-        [HttpGet]
-        public ActionResult CreatePlayer()
-        {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            return View();
-        }
-
-        [HttpPost]
-        public ActionResult CreatePlayer(Player player)
-        {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            if (ModelState.IsValid)
-            {
-                HomeController._currentPlayer = player;
-                PlayerCreated = true;
-                ViewData["PlayerCreated"] = PlayerCreated;
-                PlayerJoinedGame = PlayerCreated && GameCreated &&
-                    HomeController._currentGame.Players.Contains(HomeController._currentPlayer);
-            }
-
-            return View();
+            else
+                return InvalidModelView();    
         }
 
         [HttpGet]
         public ActionResult JoinGame()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            if (_currentGame.Players.Count < _currentGame.MaximumPlayers)
+            SetMenuToggles();
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> JoinGame([FromBody] Player player)
+        {
+            Player Homonym = SelectedGame.Players.FirstOrDefault(p => p.Name == player.Name);
+            AddedPlayerViewModel AddedPlayer = new AddedPlayerViewModel
             {
-                _currentGame.Players.Add(HomeController._currentPlayer);
-                PlayerJoinedGame = true;
-                ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-                return View("AddedToGame", _currentGame);
+                MaxPlayers = SelectedGame.MaximumPlayers,
+                CurrentPlayers = SelectedGame.Players.Count,
+                PlayerIsNew = Homonym == null,
+                PlayerName = player.Name
+            };
+            if (AddedPlayer.PlayerIsNew)
+            {
+                if (ModelState.IsValid)
+                {
+                    using var Client = new HttpClient();
+
+                    using var Response = await Client.PutAsync(
+                        $"{ApiLocation}AddPlayer/{SelectedGameId}",
+                        new StringContent(JsonSerializer.Serialize(player),
+                            Encoding.UTF8, "application/json"));
+                    if (Response.StatusCode == HttpStatusCode.BadRequest)
+                    {
+                        AddedPlayer.PlayerAdded = false;
+                    }
+                    else
+                    {
+                        AddedPlayer.PlayerAdded = true;
+                        AddedPlayer.CurrentPlayers++;
+                        SelectedPlayer = player;
+                        SelectedGame.Players.Add(player);
+                    }
+                }
+                else
+                    return InvalidModelView();
             }
             else
-            {
-                return View("GameFull", _currentGame);
-            }
+                SelectedPlayer = Homonym;
+
+            SetMenuToggles();
+            return View("AddedToGame", AddedPlayer);
         }
 
         [HttpGet]
-        public IActionResult ReShuffle()
+        public async Task<IActionResult> Reshuffle()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            HomeController.Shuffle();
-            _cardTable.Title = "Cards Reshuffled:";
-            _cardTable.UndealtCards = new Deck(HomeController._currentGame.ShuffledDeck);
+            if (SelectedGame == null)
+                return NoGameView();
+            using (var Client = new HttpClient())
+            {
+                using var Response = await Client.GetAsync(
+                    $"{ApiLocation}ShuffleDeck/{SelectedGameId}");
+                var apiResponse = await Response.Content.ReadAsStringAsync();
+                SelectedGame.ShuffledDeck = JsonSerializer.Deserialize<Deck>(apiResponse);
+            }
+            CardTableViewModel CardTable = new CardTableViewModel
+            {
+                Title = "Cards Reshuffled:",
+                UndealtCards = new Deck(SelectedGame.ShuffledDeck)
+            };
 
-            return View("DeckView", _cardTable);
+            SetMenuToggles();
+            return View("DeckView", CardTable);
         }
 
         [HttpGet]
         public IActionResult Shuffled()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            _cardTable.Title = "Cards shuffled:";
-            _cardTable.UndealtCards = new Deck(HomeController._currentGame.ShuffledDeck);
+            if (SelectedGame == null)
+                return NoGameView();
+            CardTableViewModel CardTable = new CardTableViewModel
+            {
+                Title = "Cards Shuffled:",
+                UndealtCards = new Deck(SelectedGame.ShuffledDeck)
+            };
 
-            return View("DeckView", _cardTable);
+            SetMenuToggles();
+            return View("DeckView", CardTable);
         }
 
         [HttpGet]
         public IActionResult ShuffledAndSuited()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            _cardTable.Title = "Cards shuffled and separated into suits:";
-            _cardTable.UndealtCards.Cards = new List<Card>();
+            if (SelectedGame == null)
+                return NoGameView();
+            CardTableViewModel CardTable = new CardTableViewModel
+            (
+                title: "Cards shuffled and separated into suits:",
+                undealtCards: new Deck(SelectedGame.StandardDeckType)
+            );
+            CardTable.UndealtCards.Cards.Clear();
             var DealtCards =
-                from card in HomeController._currentGame.ShuffledDeck.Cards
+                from card in SelectedGame.ShuffledDeck.Cards
                 group card by card.CardSuit into suits
                 select suits;
             foreach (var suit in DealtCards)
-                _cardTable.UndealtCards.Cards.AddRange(suit);
+                CardTable.UndealtCards.Cards.AddRange(suit);
 
-            return View("SuitedDeckView", _cardTable);
+            SetMenuToggles();
+            return View("DeckView", CardTable);
         }
 
         [HttpGet]
-        public IActionResult DrawCard()
+        public async Task<IActionResult> DrawCard()
         {
-            if (!HomeController._currentPlayer.PlayerHand.Cards.Any())
+            if (SelectedGame == null)
+                return NoGameView();
+            if (!SelectedGame.Players.Contains(SelectedPlayer))
+                return NotPlayingView();
+            if (!SelectedPlayer.PlayerHand.Cards.Any())
             {
-                HomeController._currentPlayer.PlayerHand = new Hand();
+                SelectedPlayer.PlayerHand = new Hand();
             }
-            HomeController._currentPlayer.PlayerHand.Cards.Add(
-                HomeController._currentGame.ShuffledDeck.Cards.FirstOrDefault());
-            HomeController._currentGame.ShuffledDeck.Cards.RemoveRange(0, 1);
+            using (var Client = new HttpClient())
+            {
+                Card CardDrawn;
+                using (var Response = await Client.GetAsync(
+                    $"{ApiLocation}DealCard/{SelectedGameId}"))
+                {
+                    var apiResponse = await Response.Content.ReadAsStringAsync();
+                    CardDrawn = JsonSerializer.Deserialize<Card>(apiResponse);
+                }
+                using (var Response = await Client.PutAsync(
+                    $"{ApiLocation}AddToHand/{SelectedGameId}/{SelectedPlayer.Id}",
+                    new StringContent(JsonSerializer.Serialize(CardDrawn),
+                        Encoding.UTF8, "application/json")))
+                {
+                    if (Response.StatusCode == HttpStatusCode.BadRequest)
+                    {
+                        return UnexpectedErrorView
+                            ($"API Problem adding card to Player " +
+                            $"{SelectedPlayer.Id} in Game {SelectedGameId}");
+                    }
+                    else
+                    {
+                        SelectedPlayer.PlayerHand.Cards.Add(CardDrawn);
+                        SelectedGame.ShuffledDeck.Cards.Remove(CardDrawn);
+                    }
+                }
+            }
+
             return ShowHands();
         }
 
         [HttpGet]
-        public IActionResult DealHand()
+        public async Task<IActionResult> DealHand()
         {
-            if (!HomeController._currentPlayer.PlayerHand.Cards.Any())
+            if (SelectedGame == null)
+                return NoGameView();
+            if (!SelectedGame.Players.Contains(SelectedPlayer))
+                return NotPlayingView();
+            if (!SelectedPlayer.PlayerHand.Cards.Any())
             {
-                HomeController._currentPlayer.PlayerHand = new Hand();
+                SelectedPlayer.PlayerHand = new Hand();
             }
-            HomeController._currentPlayer.PlayerHand.Cards.AddRange(
-                HomeController._currentGame.ShuffledDeck.Cards.Take(_currentGame.HandSize).ToList());
-            HomeController._currentGame.ShuffledDeck.Cards.RemoveRange(0, _currentGame.HandSize);
+            using (var Client = new HttpClient())
+            {
+                for (int drawNumber = 0; drawNumber < SelectedGame.HandSize; drawNumber++)
+                {
+                    Card CardDrawn;
+                    using (var Response = await Client.GetAsync(
+                        $"{ApiLocation}DealCard/{SelectedGameId}"))
+                    {
+                        var apiResponse = await Response.Content.ReadAsStringAsync();
+                        CardDrawn = JsonSerializer.Deserialize<Card>(apiResponse);
+                    }
+                    using (var Response = await Client.PutAsync(
+                        $"{ApiLocation}AddToHand/{SelectedGameId}/{SelectedPlayer.Id}",
+                        new StringContent(JsonSerializer.Serialize(CardDrawn),
+                            Encoding.UTF8, "application/json")))
+                    {
+                        if (Response.StatusCode == HttpStatusCode.BadRequest)
+                        {
+                            return UnexpectedErrorView
+                                ($"API Problem adding card to Player " +
+                                $"{SelectedPlayer.Id} in Game {SelectedGameId}");
+                        }
+                        else
+                        {
+                            SelectedPlayer.PlayerHand.Cards.Add(CardDrawn);
+                            SelectedGame.ShuffledDeck.Cards.Remove(CardDrawn);
+                        }
+                    }
+                }
+            }
+
             return ShowHands();
         }
 
         [HttpGet]
         public IActionResult ShowHands()
         {
-            ViewData["PlayerCreated"] = PlayerCreated;
-            ViewData["GameCreated"] = GameCreated;
-            ViewData["PlayerJoinedGame"] = PlayerJoinedGame;
-            _cardTable.Title = "Cards dealt into hands:";
-            _cardTable.Hands = new List<Hand>();
-            foreach (var player in _currentGame.Players)
-                _cardTable.Hands.Add(player.PlayerHand);
-            _cardTable.UndealtCards = new Deck(HomeController._currentGame.ShuffledDeck);
 
-            return View("CardTableView", _cardTable);
+            if (SelectedGame == null)
+                return NoGameView();
+            if (!SelectedGame.Players.Any())
+                return NoPlayersView();
+            CardTableViewModel CardTable = new CardTableViewModel
+            (
+                title: "Cards dealt into hands:",
+                undealtCards: new Deck(SelectedGame.ShuffledDeck)
+            );
+            foreach (var player in SelectedGame.Players)
+            {
+                CardTable.Hands.Add(player.PlayerHand);
+                CardTable.PlayerNames.Add(player.Name);
+            }
+
+            SetMenuToggles();
+            return View("CardTableView", CardTable);
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        private ViewResult NoGameView()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            SetMenuToggles();
+            return View("DisplayText",
+                        new TextViewModel
+                        {
+                            Title = "NoSelectedGame",
+                            Text = "No game has been selected.",
+                            CssStyle = "font-size: 3vw;"
+                        });
+        }
+        private ViewResult NotPlayingView()
+        {
+            SetMenuToggles();
+            return View("DisplayText",
+                        new TextViewModel
+                        {
+                            Title = "NotPlaying",
+                            Text = "The currently selected player is not in this game.",
+                            CssStyle = "font-size: 2vw;"
+                        });
+        }
+        private ViewResult NoPlayersView()
+        {
+            SetMenuToggles();
+            return View("DisplayText",
+                        new TextViewModel
+                        {
+                            Title = "NoPlayers",
+                            Text = "There are no players in this game.",
+                            CssStyle = "font-size: 3vw; font-color: blue;"
+                        });
+        }
+        private ViewResult InvalidModelView()
+        {
+            SetMenuToggles();
+            return View("DisplayText",
+                        new TextViewModel
+                        {
+                            Title = "InvalidModel",
+                            Text = "The model state was invalid.",
+                            CssStyle = "font-size: 5vw; font-color: red;"
+                        });
+        }
+        private ViewResult UnexpectedErrorView(string Message)
+        {
+            SetMenuToggles();
+            return View("DisplayText",
+                        new TextViewModel
+                        {
+                            Title = "UnexpectedError",
+                            Text = Message,
+                            CssStyle = "font-size: 5vw; font-color: red;"
+                        });
         }
     }
 }

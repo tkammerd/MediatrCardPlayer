@@ -1,8 +1,42 @@
-﻿@{
+﻿@model FoyerViewModel
+
+@{
     ViewData["Title"] = "Home Page";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <h1 class="display-4">Currently Selected Game</h1>
+
+    @{ var game = Model.Games.FirstOrDefault(g => g.Id == Model.GameIdSelected); } 
+    @if (game != null)
+    { 
+        <table style="width: 80%">
+            <tr>
+                <td>Game ID:</td>            <td>@game.Id</td>
+                <td>Deck Type:</td>          <td>@game.StandardDeckType</td>
+                <td>Max Players:</td>        <td>@game.MaximumPlayers</td>
+                <td>Current Players:</td>    <td>@game.Players.Count</td>
+                <td>Starting # of Cards:</td><td>@game.StartDeck.Cards.Count</td>
+                <td>Current # of Cards:</td> <td>@game.ShuffledDeck.Cards.Count</td>
+            </tr>
+        </table>
+        @foreach (var player in game.Players)
+        {
+            <table style="width: 80%">
+                <tr>
+                    <td>@player.Name</td>
+                    @foreach (var card in player.PlayerHand.Cards)
+                    {
+                        <td>@card</td>
+                    }
+                </tr>
+            </table>
+        }
+    }
+    else
+    {
+        <div>
+            No current game.
+        </div>
+    }
 </div>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace CardPlayer.Data.Models
@@ -10,6 +11,13 @@ namespace CardPlayer.Data.Models
         private readonly Random _rng;
         public DeckType TypeOfDeck { get; }
         public List<Card> Cards { get; set; }
+
+        [JsonConstructor]
+        public Deck(DeckType typeOfDeck, List<Card> cards)
+        {
+            TypeOfDeck = typeOfDeck;
+            Cards = cards;
+        }
 
         public Deck(StandardDecks knownType = StandardDecks.Traditional)
         {

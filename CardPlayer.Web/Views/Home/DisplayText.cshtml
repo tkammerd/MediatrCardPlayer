@@ -1,0 +1,10 @@
+﻿@model TextViewModel
+@{
+    ViewBag.Title = Model.Title;
+}
+
+<div style="@(Model.CssStyle)">@Model.Text</div>
+
+<p>
+    @Html.ActionLink(Model.BackLinkLabel, Model.BackLink)
+</p>

@@ -11,14 +11,15 @@
 <table>
     @foreach (var hand in Model.Hands)
     {
-        <tr>
-            @{handNum++;}
-            <td><h4>Hand #@handNum:</h4></td>
-            @foreach (var card in hand.Cards)
-            {
-                <td><h4>@card&nbsp;</h4></td>
-            }
-        </tr>
+    <tr>
+        <td><h4>@(Model.PlayerNames[handNum])'s Hand:</h4></td>
+        @{handNum++;}
+
+        @foreach (var card in hand.Cards)
+        {
+            <td><h4>@card&nbsp;</h4></td>
+        }
+    </tr>
     }
 </table>
 

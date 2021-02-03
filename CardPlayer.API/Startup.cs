@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace CardPlayer.API
@@ -28,7 +29,13 @@ namespace CardPlayer.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            // Keep the casing to that of the model when serializing to json 
+            // (see https://stackoverflow.com/a/59892130)
+            services.AddControllers()
+                    .AddJsonOptions(options => 
+                    {
+                        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+                    });
             services.AddMediatR(typeof(Startup));
             services.AddDbContext<GameContext>(options => options.UseInMemoryDatabase(databaseName: "GameDB"));
         }

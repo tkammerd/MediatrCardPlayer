@@ -11,49 +11,49 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CardPlayer</a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                @{ string DisabledStyle = " disabled fw-italic";
+                    string EnabledStyle = " enabled font-weight-bold";
+                    string LinkAttributes = $"nav-link text-dark {EnabledStyle}";
+                }
+                <a class="@LinkAttributes" asp-area="" asp-controller="Home" 
+                    asp-action="Index">Current Game</a>
+                <button class="navbar-toggler" type="button" 
+                        data-toggle="collapse" data-target=".navbar-collapse" 
+                        aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
                     <ul class="navbar-nav flex-grow-1">
-                        @{  string DisabledStyle = " disabled fw-italic";
-                            string EnabledStyle = " enabled font-weight-bold";
-                            string LinkAttributes = "nav-link text-dark";
-                        }
-                        @{  if ((bool)ViewData["PlayerCreated"])
-                                LinkAttributes += DisabledStyle;
-                            else
-                                LinkAttributes += EnabledStyle;
-                        }
-                        <li class="nav-item">
-                            <a class="@LinkAttributes" asp-area="" asp-controller="Home"
-                               asp-action="CreatePlayer">Create Player</a>
-                        </li>
-                        @{  LinkAttributes = "nav-link text-dark";
-                            if ((bool)ViewData["GameCreated"])
-                                LinkAttributes += DisabledStyle;
-                            else
-                                LinkAttributes += EnabledStyle;
-                        }
+                        @{ LinkAttributes = $"nav-link text-dark {EnabledStyle}"; }
                         <li class="nav-item">
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="CreateGame">Create Game</a>
                         </li>
-                        @{  LinkAttributes = "nav-link text-dark";
-                            if ((bool)ViewData["PlayerJoinedGame"] || 
-                                !(bool)ViewData["GameCreated"] ||
-                                !(bool)ViewData["PlayerCreated"])
-                                LinkAttributes += DisabledStyle;
-                            else
+                        <li class="nav-item">
+                            <a class="@LinkAttributes" asp-area="" asp-controller="Home"
+                               asp-action="SelectGame">Select Game</a>
+                        </li>
+                        @{ LinkAttributes = "nav-link text-dark";
+                            if ((bool)ViewData["GameIsSelected"])
                                 LinkAttributes += EnabledStyle;
+                            else
+                                LinkAttributes += DisabledStyle;
                         }
                         <li class="nav-item">
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="JoinGame">Join Game</a>
                         </li>
-                        @{ LinkAttributes = $"nav-link text-dark {EnabledStyle}"; }
+                        @{ LinkAttributes = "nav-link text-dark";
+                            if ((bool)ViewData["GameIsSelected"])
+                                LinkAttributes += EnabledStyle;
+                            else
+                                LinkAttributes += DisabledStyle;
+                        }
+                        <li class="nav-item">
+                            <a class="@LinkAttributes" asp-area="" asp-controller="Home"
+                               asp-action="Original">Original Order</a>
+                        </li>
                         <li class="nav-item">
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="Reshuffle">Reshuffle</a>
@@ -66,8 +66,8 @@
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="ShuffledAndSuited">Shuffled and Suited</a>
                         </li>
-                        @{  LinkAttributes = "nav-link text-dark";
-                            if ((bool)ViewData["PlayerJoinedGame"])
+                        @{ LinkAttributes = "nav-link text-dark";
+                            if ((bool)ViewData["PlayerIsInGame"])
                                 LinkAttributes += EnabledStyle;
                             else
                                 LinkAttributes += DisabledStyle;
@@ -76,18 +76,12 @@
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="DealHand">Deal Hand</a>
                         </li>
-                        @{  LinkAttributes = "nav-link text-dark";
-                            if ((bool)ViewData["PlayerJoinedGame"])
-                                LinkAttributes += EnabledStyle;
-                            else
-                                LinkAttributes += DisabledStyle;
-                        }
                         <li class="nav-item">
                             <a class="@LinkAttributes" asp-area="" asp-controller="Home"
                                asp-action="DrawCard">Draw a Card</a>
                         </li>
-                        @{  LinkAttributes = "nav-link text-dark";
-                            if ((bool)ViewData["GameCreated"])
+                        @{ LinkAttributes = "nav-link text-dark";
+                            if ((bool)ViewData["GameIsSelected"])
                                 LinkAttributes += EnabledStyle;
                             else
                                 LinkAttributes += DisabledStyle;

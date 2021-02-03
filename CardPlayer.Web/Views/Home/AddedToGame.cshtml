@@ -1,38 +1,45 @@
-﻿@model CardPlayer.Data.Models.Game
+﻿@model AddedPlayerViewModel
 
 @{
     ViewData["Title"] = "AddedToGame";
 }
 
-<h1>AddedToGame</h1>
+@{ var OkToAdd = Model.PlayerAdded || !Model.PlayerIsNew || (Model.PlayerIsNew && !Model.GameIsFull); }
+
+@if (!OkToAdd)
+{
+    <h1>Unable to add player "@Model.PlayerName". Game full.</h1>
+}
+else
+{
+    <h1>
+        Player "@Model.PlayerName" selected
+        @if (Model.PlayerIsNew)
+        {
+            <span>and added to the game.</span>
+        }
+        else
+        {
+            <span>for the current game.</span>
+        }
+    </h1>
+}
 
 <div>
     <h4>Game</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.StandardDeckType)
+            @Html.DisplayNameFor(model => model.MaxPlayers)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.StandardDeckType)
+            @Html.DisplayFor(model => model.MaxPlayers)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.HandSize)
+            @Html.DisplayNameFor(model => model.CurrentPlayers)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.HandSize)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MaximumPlayers)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MaximumPlayers)
-        </dd>
-        <dt class="col-sm-2">
-            NumberOfPlayers
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Players.Count)
+            @Html.DisplayFor(model => model.CurrentPlayers)
         </dd>
     </dl>
 </div>
